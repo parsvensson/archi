@@ -59,6 +59,10 @@ implements IArchimateDiagramEditor {
         else if(IPreferenceConstants.VIEWPOINTS_GHOST_DIAGRAM_ELEMENTS == event.getProperty()) {
             getGraphicalViewer().setContents(getModel()); // refresh the model contents
         }
+        // Default fill color changed - refresh palette to show new themed icons
+        else if(event.getProperty().startsWith(IPreferenceConstants.DEFAULT_FILL_COLOR_PREFIX)) {
+            getPaletteRoot().updateViewpoint();
+        }
         else {
             super.applicationPreferencesChanged(event);
         }
