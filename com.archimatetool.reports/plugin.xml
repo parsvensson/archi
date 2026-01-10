@@ -74,4 +74,18 @@
          </enabledWhen>
       </handler>
    </extension>
+   <extension
+         point="org.eclipse.core.runtime.preferences">
+      <initializer
+            class="com.archimatetool.reports.preferences.PreferenceInitializer">
+      </initializer>
+   </extension>
+   <extension
+         point="org.eclipse.ui.preferencePages">
+      <page
+            class="com.archimatetool.reports.preferences.HTMLReportPreferencesPage"
+            id="com.archimatetool.reports.preferences.HTMLReportPreferencesPage"
+            name="%prefsHTMLReports">
+      </page>
+   </extension>
 </plugin>

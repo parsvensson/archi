@@ -37,6 +37,12 @@ public class Messages extends NLS {
 
     public static String HTMLReportExporter_9;
 
+    public static String HTMLReportExporter_15;
+
+    public static String HTMLReportExporter_16;
+
+    public static String HTMLReportExporter_17;
+
     static {
         // initialize resource bundle
         NLS.initializeMessages(BUNDLE_NAME, Messages.class);

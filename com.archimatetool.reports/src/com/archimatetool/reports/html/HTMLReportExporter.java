@@ -61,6 +61,7 @@ import com.archimatetool.model.IDiagramModelReference;
 import com.archimatetool.model.IFolder;
 import com.archimatetool.model.IIdentifier;
 import com.archimatetool.reports.ArchiReportsPlugin;
+import com.archimatetool.reports.preferences.IHTMLReportPreferenceConstants;
 
 
 /**
@@ -142,7 +143,16 @@ public class HTMLReportExporter {
         else if(exception[0] != null) {
             throw exception[0];
         }
-        
+
+        // Run post-process command if configured
+        try {
+            runPostProcessCommand(targetFolder);
+        }
+        catch(Exception ex) {
+            MessageDialog.openError(Display.getCurrent().getActiveShell(),
+                    Messages.HTMLReportExporter_17, ex.getMessage());
+        }
+
         // Open it in external Browser
         IWorkbenchBrowserSupport support = PlatformUI.getWorkbench().getBrowserSupport();
         IWebBrowser browser = support.getExternalBrowser();
@@ -184,7 +194,16 @@ public class HTMLReportExporter {
         else if(exception[0] != null) {
             throw exception[0];
         }
-        
+
+        // Run post-process command if configured
+        try {
+            runPostProcessCommand(PREVIEW_FOLDER);
+        }
+        catch(Exception ex) {
+            MessageDialog.openError(Display.getCurrent().getActiveShell(),
+                    Messages.HTMLReportExporter_17, ex.getMessage());
+        }
+
         // Open it in internal Browser
         IBrowserEditorInput input = new BrowserEditorInput("file:///" + file[0].getPath(), Messages.HTMLReportExporter_0 + " " + fModel.getName()); //$NON-NLS-1$ //$NON-NLS-2$
         IBrowserEditor editor = (IBrowserEditor)EditorManager.openEditor(input, IBrowserEditor.ID);
@@ -532,12 +551,43 @@ public class HTMLReportExporter {
         BoundsWithAbsolutePosition newBounds = new BoundsWithAbsolutePosition(dmo.getBounds(), ImageFactory.getImageDeviceZoom() / 100);
         newBounds.setOffset(offsetX, offsetY); // Add offset
         childBoundsMap.put(dmo.getId(), newBounds);
-        
+
         // Children
         if(dmo instanceof IDiagramModelContainer) {
             for(IDiagramModelObject child: ((IDiagramModelContainer)dmo).getChildren() ) {
                 addNewBounds(child, newBounds.getX1(), newBounds.getY1());
             }
+        }
+    }
+
+    /**
+     * Run the post-process command if configured
+     * @param reportFolder The folder where the report was generated
+     */
+    private void runPostProcessCommand(File reportFolder) throws IOException, InterruptedException {
+        String command = ArchiReportsPlugin.getInstance()
+                .getPreferenceStore()
+                .getString(IHTMLReportPreferenceConstants.HTML_REPORT_POST_PROCESS_COMMAND);
+
+        if(!StringUtils.isSet(command)) {
+            return; // No command configured
+        }
+
+        // Variable substitution for @archi.data
+        String userDataFolder = ArchiPlugin.getInstance().getUserDataFolder().getAbsolutePath();
+        command = command.replace("@archi.data", userDataFolder); //$NON-NLS-1$
+
+        setProgressSubTask(Messages.HTMLReportExporter_15);
+
+        ProcessBuilder pb = new ProcessBuilder(command.split("\\s+")); //$NON-NLS-1$
+        pb.directory(reportFolder);
+        pb.redirectErrorStream(true);
+
+        Process process = pb.start();
+        int exitCode = process.waitFor();
+
+        if(exitCode != 0) {
+            throw new IOException(NLS.bind(Messages.HTMLReportExporter_16, exitCode));
         }
     }
 
