@@ -51,6 +51,7 @@ import com.archimatetool.editor.Logger;
 import com.archimatetool.editor.ui.ArchiLabelProvider;
 import com.archimatetool.editor.ui.ColorFactory;
 import com.archimatetool.editor.ui.IArchiImages;
+import com.archimatetool.editor.ui.ThemedIconFactory;
 import com.archimatetool.editor.ui.ThemeUtils;
 import com.archimatetool.editor.ui.components.CustomColorDialog;
 import com.archimatetool.editor.ui.factory.model.FolderUIProvider;
@@ -647,10 +648,13 @@ implements IWorkbenchPreferencePage, IPreferenceConstants {
     public boolean performOk() {
         getPreferenceStore().setValue(DERIVE_ELEMENT_LINE_COLOR, fDeriveElementLineColorsButton.getSelection());
         getPreferenceStore().setValue(SAVE_USER_DEFAULT_COLOR, fPersistUserDefaultColors.getSelection());
-        
+
         saveColors(getPreferenceStore(), true);
         saveThemeColors();
-        
+
+        // Refresh themed icons with new colors
+        ThemedIconFactory.refreshThemedImages();
+
         return true;
     }
     

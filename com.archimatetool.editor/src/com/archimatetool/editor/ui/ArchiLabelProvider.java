@@ -107,23 +107,35 @@ public class ArchiLabelProvider {
         if(object == null) {
             return null;
         }
-        
+
         object = getAdaptableObject(object);
-        
+
         // This first, since EClass is an EObject
         if(object instanceof EClass eClass) {
+            // Try themed icon first for ArchiMate elements
+            Image themedImage = ThemedIconFactory.getThemedImage(eClass);
+            if(themedImage != null) {
+                return themedImage;
+            }
+
             IObjectUIProvider provider = ObjectUIFactory.INSTANCE.getProviderForClass(eClass);
             if(provider != null) {
                 return provider.getImage();
             }
         }
         else if(object instanceof EObject eObject) {
+            // Try themed icon first for ArchiMate elements
+            Image themedImage = ThemedIconFactory.getThemedImage(eObject.eClass());
+            if(themedImage != null) {
+                return themedImage;
+            }
+
             IObjectUIProvider provider = ObjectUIFactory.INSTANCE.getProvider(eObject);
             if(provider != null) {
                 return provider.getImage();
             }
         }
-        
+
         return null;
     }
     
@@ -135,12 +147,18 @@ public class ArchiLabelProvider {
         if(eClass == null) {
             return null;
         }
-        
+
+        // Try themed icon first for ArchiMate elements
+        ImageDescriptor themedDescriptor = ThemedIconFactory.getThemedImageDescriptor(eClass);
+        if(themedDescriptor != null) {
+            return themedDescriptor;
+        }
+
         IObjectUIProvider provider = ObjectUIFactory.INSTANCE.getProviderForClass(eClass);
         if(provider != null) {
             return provider.getImageDescriptor();
         }
-        
+
         return null;
     }
     
