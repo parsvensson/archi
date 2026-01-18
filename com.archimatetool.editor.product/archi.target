@@ -9,5 +9,9 @@
         <unit id="org.eclipse.jgit.feature.group" version="7.5.0.202512021534-r"/>
         <unit id="org.eclipse.jgit.ssh.apache.feature.group" version="7.5.0.202512021534-r"/>
     </location>
+    <location includeAllPlatforms="false" includeConfigurePhase="true" includeMode="planner" includeSource="false" type="InstallableUnit">
+        <repository location="https://download.eclipse.org/justj/jres/21/updates/release/21.0.9"/>
+        <unit id="org.eclipse.justj.openjdk.hotspot.jre.full.feature.group" version="0.0.0"/>
+    </location>
 </locations>
 </target>
