@@ -14,9 +14,7 @@ openFile
       <programArgsLin>-eclipse.keyring
 @user.home/.archi/secure_storage
       </programArgsLin>
-      <programArgsMac>-vm
-../jre/lib/libjli.dylib
--eclipse.keyring
+      <programArgsMac>-eclipse.keyring
 &quot;@user.home/Library/Application Support/Archi/secure_storage&quot;
       </programArgsMac>
       <programArgsWin>-eclipse.keyring
@@ -70,6 +68,7 @@ openFile
       <feature id="org.eclipse.emf.ecore"/>
       <feature id="org.eclipse.emf.common"/>
       <feature id="org.eclipse.help"/>
+      <feature id="org.eclipse.justj.openjdk.hotspot.jre.full"/>
       <feature id="org.eclipse.rcp"/>
       <feature id="org.eclipse.e4.rcp"/>
       <feature id="org.eclipse.equinox.p2.core.feature"/>
