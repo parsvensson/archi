@@ -202,7 +202,7 @@ public abstract class AbstractExportProvider implements IImageExportProvider {
      * @param height
      */
     protected void setViewBoxAttribute(Element root, int min_x, int min_y, int width, int height) {
-        root.setAttributeNS(null, "viewBox", min_x + " " + min_y + " " + width + " " + height);
+        root.setAttribute("viewBox", min_x + " " + min_y + " " + width + " " + height);
     }
     
     /**
@@ -212,8 +212,21 @@ public abstract class AbstractExportProvider implements IImageExportProvider {
      * @param height
      */
     protected void setSizeAttributes(Element root, int width, int height) {
-        root.setAttributeNS(null, "width", Integer.toString(width));
-        root.setAttributeNS(null, "height", Integer.toString(height));
+        root.setAttribute("width", Integer.toString(width));
+        root.setAttribute("height", Integer.toString(height));
+    }
+    
+    /**
+     * Set any attributes on the root element
+     * @param root The DOM root element
+     */
+    protected void setRootAttributes(Element root) {
+        // Set provided attributes on the root element if any. Namespace is null
+        if(attributes != null) {
+            for(Entry<String, String> att : attributes.entrySet()) {
+                root.setAttribute(att.getKey(), att.getValue());
+            }
+        }
     }
     
     /**
@@ -249,11 +262,7 @@ public abstract class AbstractExportProvider implements IImageExportProvider {
         }
         
         // Set any other attributes on the root element
-        if(attributes != null) {
-            for(Entry<String, String> att : attributes.entrySet()) {
-                root.setAttributeNS(null, att.getKey(), att.getValue());
-            }
-        }
+        setRootAttributes(root);
         
         return root;
     }
