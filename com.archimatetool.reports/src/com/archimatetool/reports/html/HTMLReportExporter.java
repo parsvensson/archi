@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Iterator;
@@ -88,12 +89,28 @@ public class HTMLReportExporter {
      * Map of new bounds for child objects in images for hit areas
      */
     private Map<String, BoundsWithAbsolutePosition> childBoundsMap = new HashMap<String, BoundsWithAbsolutePosition>();
-    
+
+    private Map<String, String> viewIdToImageNameMap = new HashMap<String, String>();
+
     private IProgressMonitor progressMonitor;
     
     static class CancelledException extends IOException {
         public CancelledException(String message) {
             super(message);
+        }
+    }
+
+    private static class ViewEntry {
+        private final String path;
+        private final String name;
+        private final String id;
+        private final String image;
+
+        private ViewEntry(String path, String name, String id, String image) {
+            this.path = path;
+            this.name = name;
+            this.id = id;
+            this.image = image;
         }
     }
     
@@ -262,6 +279,9 @@ public class HTMLReportExporter {
         
         // Write Diagrams and images
         writeDiagrams(imagesFolder, viewsFolder, stFrame);
+
+        // Write view path mappings
+        writeViewMappings(targetFolder);
         
         setProgressSubTask(Messages.HTMLReportExporter_13);
         
@@ -408,9 +428,150 @@ public class HTMLReportExporter {
             try(OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(viewFile), "UTF8")) { //$NON-NLS-1$
                 writer.write(stFrame.render());
             }
-            
+
             checkProgressCancelled();
         }
+    }
+
+    private void writeViewMappings(File targetFolder) throws IOException {
+        List<ViewEntry> viewEntries = new ArrayList<ViewEntry>();
+        buildViewEntries(fModel.getFolder(FolderType.DIAGRAMS), "", viewEntries);
+
+        String mappingsJson = buildViewMappingsJson(viewEntries);
+
+        File mappingsFile = new File(new File(targetFolder, fModel.getId()), "views-map.json"); //$NON-NLS-1$
+        try(OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(mappingsFile), "UTF8")) { //$NON-NLS-1$
+            writer.write(mappingsJson);
+        }
+
+        File mappingsJsFile = new File(new File(targetFolder, fModel.getId()), "views-map.js"); //$NON-NLS-1$
+        try(OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(mappingsJsFile), "UTF8")) { //$NON-NLS-1$
+            writer.write("window.archiViewMap = "); //$NON-NLS-1$
+            writer.write(mappingsJson.trim());
+            writer.write(";\n"); //$NON-NLS-1$
+        }
+
+        copyViewMapToRoot(targetFolder, mappingsFile, mappingsJsFile);
+    }
+
+    private void copyViewMapToRoot(File targetFolder, File mappingsFile, File mappingsJsFile) throws IOException {
+        File rootMappingFile = new File(targetFolder, "views-map.json"); //$NON-NLS-1$
+        FileUtils.copyFile(mappingsFile, rootMappingFile, false);
+
+        File rootMappingJsFile = new File(targetFolder, "views-map.js"); //$NON-NLS-1$
+        FileUtils.copyFile(mappingsJsFile, rootMappingJsFile, false);
+    }
+
+    private String buildViewMappingsJson(List<ViewEntry> viewEntries) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\n"); //$NON-NLS-1$
+        sb.append("  \"views\": [\n"); //$NON-NLS-1$
+        for(int i = 0; i < viewEntries.size(); i++) {
+            ViewEntry entry = viewEntries.get(i);
+            sb.append("    {\"path\":\"")
+                .append(escapeJson(entry.path))
+                .append("\",\"name\":\"")
+                .append(escapeJson(entry.name))
+                .append("\",\"id\":\"")
+                .append(escapeJson(entry.id))
+                .append("\",\"image\":\"")
+                .append(escapeJson(entry.image))
+                .append("\",\"pathKey\":\"")
+                .append(escapeJson(entry.path.toLowerCase()))
+                .append("\",\"nameKey\":\"")
+                .append(escapeJson(entry.name.toLowerCase()))
+                .append("\"}"); //$NON-NLS-1$
+            if(i < viewEntries.size() - 1) {
+                sb.append(","); //$NON-NLS-1$
+            }
+            sb.append("\n"); //$NON-NLS-1$
+        }
+        sb.append("  ]\n"); //$NON-NLS-1$
+        sb.append("}\n"); //$NON-NLS-1$
+        return sb.toString();
+    }
+
+    private void buildViewEntries(IFolder folder, String currentPath, List<ViewEntry> viewEntries) {
+        if(folder == null) {
+            return;
+        }
+
+        for(IFolder childFolder : folder.getFolders()) {
+            String folderPath = buildPathSegment(currentPath, childFolder.getName());
+            buildViewEntries(childFolder, folderPath, viewEntries);
+        }
+
+        for(EObject eObject : folder.getElements()) {
+            if(eObject instanceof IDiagramModel) {
+                IDiagramModel view = (IDiagramModel)eObject;
+                String viewName = StringUtils.safeString(view.getName());
+                String fullPath = buildPathSegment(currentPath, viewName);
+                String imageName = viewIdToImageNameMap.get(view.getId());
+                if(imageName != null) {
+                    String imagePath = "../images/" + imageName; //$NON-NLS-1$
+                    ViewEntry entry = new ViewEntry(fullPath, viewName, view.getId(), imagePath);
+                    viewEntries.add(entry);
+                }
+                else {
+                    String fallbackImagePath = "../images/" + view.getId() + ".png"; //$NON-NLS-1$ //$NON-NLS-2$
+                    ViewEntry entry = new ViewEntry(fullPath, viewName, view.getId(), fallbackImagePath);
+                    viewEntries.add(entry);
+                }
+            }
+        }
+    }
+
+    private String buildPathSegment(String basePath, String segment) {
+        String safeSegment = StringUtils.safeString(segment).trim();
+        if(!StringUtils.isSet(safeSegment)) {
+            return basePath;
+        }
+        if(!StringUtils.isSet(basePath)) {
+            return safeSegment;
+        }
+        return basePath + "/" + safeSegment; //$NON-NLS-1$
+    }
+
+    private String escapeJson(String value) {
+        if(value == null) {
+            return ""; //$NON-NLS-1$
+        }
+        StringBuilder sb = new StringBuilder();
+        for(int i = 0; i < value.length(); i++) {
+            char ch = value.charAt(i);
+            switch(ch) {
+                case '\\':
+                    sb.append("\\\\"); //$NON-NLS-1$
+                    break;
+                case '"':
+                    sb.append("\\\""); //$NON-NLS-1$
+                    break;
+                case '\b':
+                    sb.append("\\b"); //$NON-NLS-1$
+                    break;
+                case '\f':
+                    sb.append("\\f"); //$NON-NLS-1$
+                    break;
+                case '\n':
+                    sb.append("\\n"); //$NON-NLS-1$
+                    break;
+                case '\r':
+                    sb.append("\\r"); //$NON-NLS-1$
+                    break;
+                case '\t':
+                    sb.append("\\t"); //$NON-NLS-1$
+                    break;
+                default:
+                    if(ch < 0x20) {
+                        sb.append(String.format("\\u%04x", (int)ch)); //$NON-NLS-1$
+                    }
+                    else {
+                        sb.append(ch);
+                    }
+                    break;
+            }
+        }
+        return sb.toString();
     }
     
     /**
@@ -463,6 +624,8 @@ public class HTMLReportExporter {
                 loader.data = new ImageData[] { geoImage.getImage().getImageData(ImageFactory.getImageDeviceZoom()) };
                 File file = new File(imagesFolder, diagramName);
                 loader.save(file.getAbsolutePath(), SWT.IMAGE_PNG);
+
+                viewIdToImageNameMap.put(dm.getId(), diagramName);
             }
             catch(Throwable t) {
                 throw new IOException("Error saving image for: " + dm.getName() + "\n" + //$NON-NLS-1$ //$NON-NLS-2$

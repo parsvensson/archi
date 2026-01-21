@@ -54,6 +54,53 @@ li.tree-element, ul{
 	padding-top: 15px;
 	padding-bottom: 15px;
 }
+
+.documentation.markdown h1,
+.documentation.markdown h2,
+.documentation.markdown h3,
+.documentation.markdown h4,
+.documentation.markdown h5,
+.documentation.markdown h6 {
+	margin-top: 16px;
+	margin-bottom: 8px;
+	font-weight: 600;
+}
+
+.documentation.markdown p {
+	margin-bottom: 10px;
+}
+
+.documentation.markdown ul,
+.documentation.markdown ol {
+	margin-bottom: 10px;
+	padding-left: 22px;
+}
+
+.documentation.markdown code {
+	padding: 2px 4px;
+	background: #f5f5f5;
+	border-radius: 3px;
+	font-family: "Consolas", "Courier New", monospace;
+}
+
+.documentation.markdown pre {
+	padding: 10px;
+	background: #f5f5f5;
+	border-radius: 4px;
+	overflow: auto;
+}
+
+.documentation.markdown blockquote {
+	border-left: 3px solid #ddd;
+	padding-left: 12px;
+	color: #666;
+	margin: 10px 0;
+}
+
+.documentation.markdown img {
+	max-width: 100%;
+	height: auto;
+}
 .navbar {
 	height: 100%;
 }

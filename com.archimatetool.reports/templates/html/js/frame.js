@@ -17,6 +17,173 @@ function createLinks(text) {
           .replace(/mailto:(\S+)/g, '<a href="mailto:$1">$1</a>');
 }
 
+function escapeHtml(text) {
+	return text.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#39;');
+}
+
+function encodeArchiViewTargets(text) {
+	return (text || '').replace(/(\!?\[[^\]]*\]\()\s*(archi:view:[^)]+)\)/gi, function(match, prefix, target) {
+		var trimmed = target.trim();
+		if (trimmed.toLowerCase().indexOf('archi:view:') !== 0) {
+			return match;
+		}
+		var encoded = 'archi:view:' + encodeURIComponent(trimmed.slice('archi:view:'.length));
+		return prefix + encoded + ')';
+	});
+}
+
+function renderMarkdown(text) {
+	if (typeof marked === 'undefined') {
+		return escapeHtml(text);
+	}
+	marked.setOptions({
+		gfm: true,
+		breaks: true
+	});
+	var processed = encodeArchiViewTargets(text || '');
+	return marked.parse(processed);
+}
+
+function sanitizeMarkdown(html) {
+	return html;
+}
+
+function fetchViewMap(callback) {
+	if (typeof callback !== 'function') {
+		return;
+	}
+	if (window.archiViewMap && window.archiViewMap.views) {
+		callback(window.archiViewMap.views);
+		return;
+	}
+	var views = [];
+	function handleData(data) {
+		if (data && data.views) {
+			views = data.views;
+		}
+		callback(views);
+	}
+	$.getJSON('../../views-map.json')
+		.done(handleData)
+		.fail(function() {
+			$.getJSON('../../../views-map.json')
+				.done(handleData)
+				.fail(function() {
+					callback([]);
+				});
+		});
+}
+
+function normalizeViewReference(value) {
+	var ref = (value || '').replace(/^archi:view:/i, '');
+	ref = ref.replace(/\+/g, ' ');
+	try {
+		ref = decodeURIComponent(ref);
+	}
+	catch (e) {
+	}
+	return ref.replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+function resolveViewEntry(ref, viewMap) {
+	var target = normalizeViewReference(ref);
+	if (!target) {
+		console.debug('[archi] Empty view reference:', ref);
+		return null;
+	}
+	if (!viewMap || viewMap.length === 0) {
+		console.debug('[archi] View map is empty.');
+		return null;
+	}
+	var exactMatch = null;
+	var nameMatch = null;
+	for (var i = 0; i < viewMap.length; i++) {
+		var entry = viewMap[i];
+		var entryPath = (entry.pathKey || '').toLowerCase();
+		var entryName = (entry.nameKey || '').toLowerCase();
+		if (!exactMatch && entryPath === target) {
+			exactMatch = entry;
+		}
+		if (!nameMatch && entryName === target) {
+			nameMatch = entry;
+		}
+	}
+	if (exactMatch) {
+		return exactMatch;
+	}
+	if (nameMatch) {
+		return nameMatch;
+	}
+	console.debug('[archi] No view match for:', target);
+	return null;
+}
+
+function resolveViewLink(entry) {
+	if (!entry || !entry.id) {
+		return null;
+	}
+	var type = document.location.href.split('/').slice(-2, -1).pop();
+	if (type === 'views') {
+		return entry.id + '.html';
+	}
+	return '../views/' + entry.id + '.html';
+}
+
+function updateMarkdownImages(viewMap, $container) {
+	var $images = $container ? $container.find('img') : $('img');
+	$images.each(function() {
+		var src = $(this).attr('src');
+		if (!src) {
+			return;
+		}
+		if (src.toLowerCase().indexOf('archi:view:') === 0) {
+			var entry = resolveViewEntry(src, viewMap);
+			if (entry && entry.image) {
+				console.debug('[archi] Resolved view image:', src, '->', entry.image);
+				$(this).attr('src', entry.image);
+			}
+		}
+	});
+}
+
+function updateMarkdownLinks(viewMap, $container) {
+	var $links = $container ? $container.find('a') : $('a');
+	$links.each(function() {
+		var href = $(this).attr('href');
+		if (!href) {
+			return;
+		}
+		if (href.toLowerCase().indexOf('archi:view:') === 0) {
+			var entry = resolveViewEntry(href, viewMap);
+			var resolved = resolveViewLink(entry);
+			if (resolved) {
+				console.debug('[archi] Resolved view link:', href, '->', resolved);
+				$(this).attr('href', resolved);
+				$(this).attr('target', 'view');
+			}
+		}
+	});
+}
+
+function renderMarkdownDocumentation() {
+	var $docs = $('.documentation.markdown');
+	if ($docs.length === 0) {
+		return;
+	}
+	var originalText = $docs.text();
+	var rendered = renderMarkdown(originalText);
+	var sanitized = sanitizeMarkdown(rendered);
+	$docs.html(sanitized);
+	fetchViewMap(function(viewMap) {
+		updateMarkdownImages(viewMap, $docs);
+		updateMarkdownLinks(viewMap, $docs);
+	});
+}
+
 // Hints URLs
 var hints = {
 // Hints for viewpoints
@@ -155,6 +322,8 @@ $(document).ready(function() {
     $('.convertlinks').each(function() {
         $(this).html(createLinks($(this).html()));
     });
+
+	renderMarkdownDocumentation();
 
 	// Replace Hint URL
 	for (var id in hints) {
