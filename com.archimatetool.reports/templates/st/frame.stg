@@ -157,6 +157,9 @@ frame(element, map) ::= <<
 	<!-- REPORT SPECIFIC -->
 	<link type="text/css" rel="stylesheet" href="../../css/model.css">
 	<link type="text/css" rel="stylesheet" href="../../css/i18n.css">
+	<script type="text/javascript" src="../../lib/markdown/marked.min.js"></script>
+	<script type="text/javascript" src="../../lib/markdown/purify.min.js"></script>
+	<script type="text/javascript" src="../../views-map.js"></script>
 	<script type="text/javascript" src="../../js/frame.js"></script>
 	<script type="text/javascript" src="../../js/imageMapResizer.min.js"></script>
 </head>
@@ -243,7 +246,7 @@ frame(element, map) ::= <<
 							<br>
 							<br>
 						^endif^
-						<div class="convertlinks documentation" style="white-space:pre-wrap">^element.Documentation;format="xml-encode"^^element.Purpose;format="xml-encode"^^element.Content;format="xml-encode"^</div>
+						<div class="documentation markdown">^element.Documentation;format="xml-encode"^^element.Purpose;format="xml-encode"^^element.Content;format="xml-encode"^</div>
 					</div>
 					<div role="tabpanel" class="tab-pane" id="properties">
 						<table class="table table-striped table-hover table-condensed">
